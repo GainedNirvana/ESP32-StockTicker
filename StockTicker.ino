@@ -5,14 +5,12 @@
 #include <WiFiClientSecure.h>
 #include "time.h"
 
-// --- Configuration ---
-const char* WIFI_SSID = "SSID";         // <-- **REPLACE THIS** with your Wi-Fi Network Name
-const char* WIFI_PASS = "PASSWORD";      // <-- **REPLACE THIS** with your Wi-Fi Password
-const char* API_KEY = "KEY";     // **<-- YOUR API KEY IS HERE**
-const char* STOCK_SYMBOL = "AAPL";            //PUT YOUR STOCK LABEL HERE
-const long UPDATE_INTERVAL_MS = 60000;      // Update every 60 seconds (60000 ms)
+const char* WIFI_SSID = "SSID";         // replace with your Wi-Fi Network Name
+const char* WIFI_PASS = "PASSWORD";      //replace with your Wi-Fi Password
+const char* API_KEY = "KEY";     // replace with your api key
+const char* STOCK_SYMBOL = "AAPL";            //ticker label here
+const long UPDATE_INTERVAL_MS = 60000;     
 
-// API URL 
 const char* apiHost = "finnhub.io";
 String apiPath = "/api/v1/quote?symbol=" + String(STOCK_SYMBOL) + "&token=" + String(API_KEY);
 
@@ -22,7 +20,7 @@ const int CENTER_Y = 120;
 
 long lastUpdate = 0;
 float currentPrice = 0.0;
-float previousPrice = 0.0; // To track changes
+float previousPrice = 0.0; 
 
 float priceOpen = 0.0;
 float priceHigh = 0.0;
@@ -32,8 +30,8 @@ String latestTime = "N/A";
 String latestDate = "N/A"; 
 
 const char* ntpServer = "pool.ntp.org";
-const long  gmtOffset_sec = -28800; // -8 hours for Pacific Standard Time (PST)
-const int   daylightOffset_sec = 3600; // 1 hour for Daylight Saving
+const long  gmtOffset_sec = -28800; // -8 hours for PST
+const int   daylightOffset_sec = 3600; // 1 hour for daylights saving
 String currentTimeStr = "00:00:00"; // To hold the current local time string
 long lastClockUpdate = 0; 
 
@@ -245,3 +243,4 @@ void updateDisplay() {
     tft.setTextColor(TFT_DARKGREY);
     tft.drawString("Refreshed: " + refreshTime, CENTER_X, 205); 
 }
+
