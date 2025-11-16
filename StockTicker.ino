@@ -5,34 +5,28 @@
 #include <WiFiClientSecure.h>
 #include "time.h"
 
-const char* WIFI_SSID = "SSID";         // replace with your Wi-Fi Network Name
-const char* WIFI_PASS = "PASSWORD";      //replace with your Wi-Fi Password
-const char* API_KEY = "KEY";     // replace with your api key
-const char* STOCK_SYMBOL = "AAPL";            //ticker label here
-const long UPDATE_INTERVAL_MS = 60000;     
+const char* wifi_ssid = "SSID";         // replace with your Wi-Fi Network Name
+const char* wifi_password = "PASSWORD";      //replace with your Wi-Fi Password
+const char* apikey = "KEY";     // replace with your api key
+const char* stocklabel = "AAPL";            //ticker label here
+const long updateinterval = 60000;     
 
 const char* apiHost = "finnhub.io";
-String apiPath = "/api/v1/quote?symbol=" + String(STOCK_SYMBOL) + "&token=" + String(API_KEY);
+String apiPath = "/api/v1/quote?symbol=" + String(stocklabel) + "&token=" + String(apikey);
 
 TFT_eSPI tft = TFT_eSPI();
-const int CENTER_X = 120;
-const int CENTER_Y = 120;
+const int center_x = 120;
+const int center_y = 120;
 
 long lastUpdate = 0;
 float currentPrice = 0.0;
 float previousPrice = 0.0; 
-
-float priceOpen = 0.0;
-float priceHigh = 0.0;
-float priceLow = 0.0;
 float priceChange = 0.0;
-String latestTime = "N/A"; 
-String latestDate = "N/A"; 
 
 const char* ntpServer = "pool.ntp.org";
-const long  gmtOffset_sec = -28800; // -8 hours for PST
-const int   daylightOffset_sec = 3600; // 1 hour for daylights saving
-String currentTimeStr = "00:00:00"; // To hold the current local time string
+const long  gmtoffset_sec = -28800; // -8 hours for PST
+const int   daylightsavingoffset_sec = 3600; // 1 hour for daylights saving
+String currentime = "00:00:00"; // To hold the current local time string
 long lastClockUpdate = 0; 
 
 void initWiFi();
@@ -40,7 +34,7 @@ bool fetchStockPrice();
 void updateDisplay();
 
 void initTime() {
-  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  configTime(gmtoffset_sec, daylightsavingoffset_sec, ntpServer);
   Serial.println("Time configured via NTP.");
 }
 
@@ -54,17 +48,17 @@ void setup() {
     tft.setTextFont(4); 
     tft.setTextColor(TFT_WHITE);
     tft.setTextDatum(MC_DATUM); 
-    tft.drawString("Program Started...", CENTER_X, CENTER_Y - 30);
+    tft.drawString("Program Started...", center_x, center_y - 30);
 
    
     initWiFi();
     initTime();
 
-    tft.drawString("Syncing Time...", CENTER_X, CENTER_Y);
-    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer); 
-    Serial.println("Local time synced via NTP.");
+    tft.drawString("Syncing Time...", center_x, center_y);
+    configTime(gmtoffset_sec, daylightsavingoffset_sec, ntpServer); 
+    Serial.println("Local time synced");
 
-    tft.drawString("Fetching Data...", CENTER_X, CENTER_Y + 30);
+    tft.drawString("Fetching Data...", center_x, center_y + 30);
     if (fetchStockPrice()) {
         previousPrice = currentPrice;
     }
@@ -73,21 +67,22 @@ void setup() {
 void loop() {
    
     if (WiFi.status() != WL_CONNECTED) {
+      
         Serial.println("Wi-Fi lost. Reconnecting...");
         initWiFi(); 
         delay(5000); 
         return;
+      
     }
 
     updateClock(); 
 
-    if (millis() - lastUpdate > UPDATE_INTERVAL_MS) {
-        Serial.println("--- Attempting to fetch new stock price... ---");
-        
+    if (millis() - lastUpdate > updateinterval) {
+      
+        Serial.println("Attempting to fetch new stock price...");
         if (fetchStockPrice()) {
             updateDisplay(); 
         }
-        
         lastUpdate = millis(); 
     }
     
@@ -95,8 +90,8 @@ void loop() {
 }
 
 void initWiFi() {
-    WiFi.begin(WIFI_SSID, WIFI_PASS);
-    Serial.print("Connecting to WiFi ");
+    WiFi.begin(wifi_ssid, wifi_password);
+    Serial.print("Connecting to WiFi...");
 
     int attempts = 0;
     while (WiFi.status() != WL_CONNECTED && attempts < 30) {
@@ -107,9 +102,9 @@ void initWiFi() {
     if (WiFi.status() == WL_CONNECTED) {
         Serial.println("\nConnected to WiFi!");
     } else {
-        Serial.println("\nFailed to connect to WiFi. Check SSID/Pass.");
+        Serial.println("\nFailed to connect to WiFi");
         tft.fillScreen(TFT_RED);
-        tft.drawString("Wi-Fi Error!", CENTER_X, CENTER_Y);
+        tft.drawString("Wi-Fi Error!", center_x, center_y);
     }
 }
 
@@ -120,7 +115,7 @@ bool fetchStockPrice() {
 
     String url = "https://" + String(apiHost) + apiPath; 
 
-    Serial.println("--- API URL Check: ---");
+    Serial.println("API URL Check:");
     Serial.println(url);
 
     http.begin(client, url);
@@ -129,7 +124,7 @@ bool fetchStockPrice() {
     if (httpCode > 0) {
         if (httpCode == HTTP_CODE_OK) {
             String payload = http.getString();
-            Serial.print("API Response Received (Partial): ");
+            Serial.print("API Response Received");
             Serial.println(payload.substring(0, 100) + "...");
 
             DynamicJsonDocument doc(4096);
@@ -143,18 +138,15 @@ bool fetchStockPrice() {
             }
 
             if (doc.containsKey("c") && doc.containsKey("d")) {
-                
                 previousPrice = currentPrice;
-    
                 currentPrice = doc["c"].as<float>();
                 float priceChange = doc["d"].as<float>(); 
-                
-                Serial.printf("Finnhub data fetched. Current Price: $%.2f, Change: $%.2f\n", currentPrice, priceChange);
+                Serial.printf("Data fetched. Current Price: $%.2f, Change: $%.2f\n", currentPrice, priceChange);
                 http.end();
                 return true; 
 
             } else {
-                Serial.println("JSON structure error: Missing 'c' or 'd' key. Check API key validity.");
+                Serial.println("JSON structure error: Check API key validity.");
             }
         }
     } else {
@@ -167,8 +159,7 @@ bool fetchStockPrice() {
 
 void updateClock() {
 
-    const int CLOCK_Y_POS = 30;
-    
+    const int clock_y_position = 30;
 
     if (millis() - lastClockUpdate >= 1000) {
         struct tm timeinfo;
@@ -176,17 +167,17 @@ void updateClock() {
             char timeStr[9]; 
             strftime(timeStr, 9, "%H:%M:%S", &timeinfo);
             
-            if (currentTimeStr != String(timeStr)) {
+            if (currentime != String(timeStr)) {
                 
-                tft.fillRect(CENTER_X - 50, CLOCK_Y_POS - 10, 100, 20, TFT_BLACK); 
+                tft.fillRect(center_x - 50, clock_y_position - 10, 100, 20, TFT_BLACK); 
                 
                 tft.setTextFont(2); 
                 tft.setTextColor(TFT_MAGENTA, TFT_BLACK);
                 tft.setTextDatum(MC_DATUM); 
             
-                tft.drawString(timeStr, CENTER_X, CLOCK_Y_POS);
+                tft.drawString(timeStr, center_x, clock_y_position);
                 
-                currentTimeStr = String(timeStr);
+                currentime = String(timeStr);
             }
         }
         lastClockUpdate = millis();
@@ -197,7 +188,6 @@ void updateDisplay() {
     struct tm timeinfo;
     char refreshTimeStr[12];  
     String refreshTime;
-    
     if (getLocalTime(&timeinfo)) {
         strftime(refreshTimeStr, 12, "%H:%M:%S", &timeinfo);
         refreshTime = String(refreshTimeStr);
@@ -207,7 +197,8 @@ void updateDisplay() {
 
     uint32_t priceColor = TFT_WHITE;
     String changeIcon = "";
-    
+
+  
     if (priceChange > 0.01) { 
         priceColor = TFT_GREEN; 
         changeIcon = "▲ ";
@@ -220,27 +211,26 @@ void updateDisplay() {
 
     tft.fillScreen(TFT_BLACK);
     tft.setTextDatum(MC_DATUM);
-
     tft.setTextFont(2); 
     tft.setTextColor(TFT_MAGENTA);
-    tft.drawString(currentTimeStr, CENTER_X, 30); 
-
+    tft.drawString(currentime, center_x, 30); 
     tft.setTextFont(6); 
     tft.setTextColor(TFT_CYAN);
-    tft.drawString(STOCK_SYMBOL, CENTER_X, 75); 
+    tft.drawString(stocklabel, center_x, 75); 
 
     tft.setTextFont(7); 
     tft.setTextColor(priceColor);
     
     String priceStr = "$" + String(currentPrice, 2); 
-    tft.drawString(priceStr, CENTER_X, 135); 
+    tft.drawString(priceStr, center_x, 135); 
 
     tft.setTextFont(4);
     String changeStr = changeIcon + String(priceChange, 2); 
-    tft.drawString(changeStr, CENTER_X, 175); 
+    tft.drawString(changeStr, center_x, 175); 
 
     tft.setTextFont(1); 
     tft.setTextColor(TFT_DARKGREY);
-    tft.drawString("Refreshed: " + refreshTime, CENTER_X, 205); 
+    tft.drawString("Refreshed: " + refreshTime, center_x, 205); 
 }
+
 
